@@ -1,26 +1,43 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/*
+ * Design tokens (Tailwind v4). teal/zinc/amber/red are already in the default
+ * palette; here we only wire the two brand fonts so `font-sans` / `font-display`
+ * resolve to Inter / Manrope (loaded via next/font in layout.tsx).
+ */
+@theme {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-manrope), var(--font-inter), ui-sans-serif, sans-serif;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    background-color: #ffffff;
+    color: #18181b; /* zinc-900 */
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  /* Consistent focus ring across the app */
+  :focus-visible {
+    outline: 2px solid #14b8a6; /* teal-500 */
+    outline-offset: 2px;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Thin, unobtrusive scrollbars for chat/session panes */
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: #d4d4d8 transparent;
+}
+.scrollbar-thin::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: #d4d4d8;
+  border-radius: 9999px;
 }

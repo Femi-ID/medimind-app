@@ -1,36 +1,43 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# MediMind — Frontend
 
-## Getting Started
+Context-aware healthcare personal assistant. Next.js 15 (App Router) + TypeScript +
+Tailwind v4, talking to the MediMind NestJS backend.
 
-First, run the development server:
+## Prerequisites
+- Node.js 20+
+- The backend running/deployed (default points at the deployed Render instance).
 
+## Setup
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+cp .env.example .env.local   # already provided; adjust if running the backend locally
+npm run dev                  # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Environment
+| Variable | Meaning |
+|---|---|
+| `NEXT_PUBLIC_API_URL` | Backend base URL incl. `/api/v1` |
+| `NEXT_PUBLIC_APP_URL` | This app's own origin |
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Auth model (important)
+- Access token: kept **in memory** (Zustand), attached as `Authorization: Bearer`.
+- Refresh token: **httpOnly cookie** set by the backend; the frontend never reads it.
+  `withCredentials: true` is set globally so the cookie rides along on `/auth/*`.
+- On load, `POST /auth/refresh` restores the session from the cookie.
+- On any `401`: one single-flight refresh → retry once → else redirect to `/login`.
+  (Concurrent refreshes are coalesced to avoid the backend's token-reuse revocation.)
+- Route protection is **client-side** (`AuthGuard`), since tokens aren't in a
+  server-readable cookie.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+> Production hardening note: the refresh cookie is `SameSite=None; Secure`. Ensure the
+> deployed frontend origin is added to the backend `CORS_ORIGIN` allow-list (exact match).
 
-## Learn More
+## Structure
+- `src/lib/api/*` — typed API modules (one per backend domain) + the axios client.
+- `src/lib/auth/store.ts` — in-memory auth store.
+- `src/lib/validators/*` — Zod schemas mirroring backend DTOs.
+- `src/components/ui/*` — design-system primitives.
+- `src/app/(auth)` — public auth pages · `src/app/(app)` — protected pages.
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Built page by page; see the build chat for the per-page history.
