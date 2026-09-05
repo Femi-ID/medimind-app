@@ -57,10 +57,16 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
  */
 async function attemptRefresh(): Promise<{ token: string | null; fatal: boolean }> {
   try {
+    // No body is sent — the backend's refresh handler takes only the
+    // httpOnly cookie via @Request(), never a @Body(). Previously this sent
+    // a `null` payload under a forced 'application/json' header, which some
+    // axios versions serialize in a way the backend's body-parser rejects
+    // outright (a 400 "not valid JSON" — a malformed-request error, not an
+    // auth failure). Omitting the body avoids that class of bug entirely.
     const res = await axios.post<{ accessToken: string }>(
       `${BASE_URL}/auth/refresh`,
-      null,
-      { withCredentials: true, headers: { 'Content-Type': 'application/json' } },
+      undefined,
+      { withCredentials: true },
     );
     return { token: res.data?.accessToken ?? null, fatal: false };
   } catch (err) {
