@@ -19,11 +19,36 @@ export function useLatestVitals() {
   });
 }
 
-export function useVitalTrends(parameter: VitalParameter, days: number) {
+export function useVitalTrends(parameter: VitalParameter, days: number, enabled = true) {
   return useQuery({
     queryKey: vitalsKeys.trends(parameter, days),
     queryFn: () => vitalsApi.getTrends(parameter, days),
     staleTime: 60_000,
+    enabled,
+  });
+}
+
+/**
+ * Raw (non-aggregated) readings from the last `hours` — used for the 24H
+ * chart view, where day-level averaging from /vitals/trends would collapse
+ * an entire day's multiple readings into a single point. Reuses the existing
+ * GET /vitals?parameter=&from=&to= endpoint; no backend change needed.
+ */
+export function useVitalRawWindow(parameter: VitalParameter, hours: number, enabled = true) {
+  return useQuery({
+    queryKey: ['vitals', 'raw-window', parameter, hours],
+    queryFn: () => {
+      const to = new Date();
+      const from = new Date(to.getTime() - hours * 60 * 60 * 1000);
+      return vitalsApi.listVitals({
+        parameter,
+        from: from.toISOString(),
+        to: to.toISOString(),
+        limit: 200,
+      });
+    },
+    enabled,
+    staleTime: 30_000,
   });
 }
 

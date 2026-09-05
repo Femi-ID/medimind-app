@@ -123,6 +123,80 @@ export const VITAL_BY_PARAM: Record<VitalParameter, VitalMeta> = VITALS.reduce(
   {} as Record<VitalParameter, VitalMeta>,
 );
 
+/* ------------------------------------------------- Dashboard trend chart tabs */
+/** The 4 selectable views in the dashboard's trend chart. 'blood_pressure' is
+ *  a combined pseudo-vital (systolic + diastolic together); the other three
+ *  map 1:1 onto a single VitalParameter. */
+export type ChartVital = 'blood_pressure' | 'heart_rate' | 'blood_glucose' | 'weight';
+
+export interface ChartVitalMeta {
+  key: ChartVital;
+  label: string;
+  shortLabel: string;
+  unit: string;
+  icon: string; // lucide icon name, resolved by the chart component
+  /** Field(s) read off a raw Vital row for the 24H view. */
+  field: 'systolicBp' | 'heartRate' | 'bloodGlucose' | 'weight';
+  secondaryField?: 'diastolicBp'; // blood_pressure only
+  parameter: VitalParameter; // primary parameter used for trend/raw queries
+  secondaryParameter?: VitalParameter; // blood_pressure only
+  decimals: number;
+}
+
+export const CHART_VITALS: ChartVitalMeta[] = [
+  {
+    key: 'blood_pressure',
+    label: 'Blood Pressure',
+    shortLabel: 'BP',
+    unit: 'mmHg',
+    icon: 'activity',
+    field: 'systolicBp',
+    secondaryField: 'diastolicBp',
+    parameter: 'systolic_bp',
+    secondaryParameter: 'diastolic_bp',
+    decimals: 0,
+  },
+  {
+    key: 'heart_rate',
+    label: 'Heart Rate',
+    shortLabel: 'Heart Rate',
+    unit: 'bpm',
+    icon: 'heart-pulse',
+    field: 'heartRate',
+    parameter: 'heart_rate',
+    decimals: 0,
+  },
+  {
+    key: 'blood_glucose',
+    label: 'Glucose',
+    shortLabel: 'Glucose',
+    unit: 'mmol/L',
+    icon: 'droplet',
+    field: 'bloodGlucose',
+    parameter: 'blood_glucose',
+    decimals: 1,
+  },
+  {
+    key: 'weight',
+    label: 'Weight',
+    shortLabel: 'Weight',
+    unit: 'kg',
+    icon: 'scale',
+    field: 'weight',
+    parameter: 'weight',
+    decimals: 1,
+  },
+];
+
+/** Fixed line colors per chart vital — deliberately NOT tone/status-based
+ *  (unlike sparklines), so the same vital always reads as the same color. */
+export const CHART_VITAL_COLOR: Record<ChartVital, string> = {
+  blood_pressure: '#0D9488', // teal-600 — also used for the BP VitalCard sparkline, so both agree
+  heart_rate: '#059669', // emerald-600
+  blood_glucose: '#7C3AED', // violet-600
+  weight: '#0EA5E9', // sky-600
+};
+
 /* ------------------------------------------------------- Triage / severity */
 /** Drives the consultation UI. Tailwind class fragments kept literal so the
  *  JIT compiler can see them. */
@@ -171,4 +245,6 @@ export const SEVERITY_TO_PARAM: Record<Severity, 'low' | 'moderate' | 'high'> = 
 
 /** Default trend window (days) for dashboard charts. */
 export const DEFAULT_TREND_DAYS = 7;
-export const TREND_RANGE_OPTIONS = [7, 30, 90] as const;
+/** '24h' is handled specially (raw readings, not day-aggregated trends). */
+export const TREND_RANGE_OPTIONS = ['24h', 7, 30, 90] as const;
+export type TrendRange = (typeof TREND_RANGE_OPTIONS)[number];

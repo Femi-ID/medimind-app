@@ -1,50 +1,18 @@
 'use client';
 
-import { useState } from 'react';
 import { toast } from 'sonner';
 import { Globe, Phone, Bell, Ruler, ChevronRight } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth/store';
-import { useUpdateProfile } from '@/hooks/use-profile';
-import { LANGUAGE_OPTIONS } from '@/lib/constants';
-import { getErrorMessage } from '@/lib/utils';
-import { Select } from '@/components/ui/select';
-import type { PreferredLanguage } from '@/types';
 
 export function PreferencesCard({ onEditContact }: { onEditContact: () => void }) {
   const user = useAuthStore((s) => s.user);
-  const updateProfile = useUpdateProfile();
-  const [savingLang, setSavingLang] = useState(false);
-
-  async function handleLanguageChange(value: PreferredLanguage) {
-    setSavingLang(true);
-    try {
-      await updateProfile.mutateAsync({ preferredLanguage: value });
-      toast.success('Language updated');
-    } catch (err) {
-      toast.error(getErrorMessage(err, 'Could not update language.'));
-    } finally {
-      setSavingLang(false);
-    }
-  }
-
   const hasContact = !!(user?.phoneNumber && user?.emergencyContactName && user?.emergencyContactPhone);
 
   return (
     <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm sm:p-6">
       <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-zinc-500">Preferences</p>
       <div className="divide-y divide-zinc-100">
-        <Row icon={Globe} label="Preferred language">
-          <Select
-            value={user?.preferredLanguage ?? 'ENGLISH'}
-            disabled={savingLang}
-            onChange={(e) => handleLanguageChange(e.target.value as PreferredLanguage)}
-            className="h-9 w-36"
-          >
-            {LANGUAGE_OPTIONS.map((l) => (
-              <option key={l.value} value={l.value}>{l.label}</option>
-            ))}
-          </Select>
-        </Row>
+        <Row icon={Globe} label="Preferred language" description="English — more languages coming soon" />
 
         <Row
           icon={Bell}
