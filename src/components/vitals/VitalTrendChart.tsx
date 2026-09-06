@@ -11,13 +11,13 @@ import {
   CartesianGrid,
   Tooltip,
 } from 'recharts';
-import { TrendingUp, TrendingDown, Activity } from 'lucide-react';
-import { useVitalTrends, useVitalRawWindow } from '@/hooks/use-vitals';
-import { computeTrendInsight } from '@/lib/vitals';
-import { CHART_VITALS, CHART_VITAL_COLOR, TREND_RANGE_OPTIONS, type ChartVital, type TrendRange } from '@/lib/constants';
+import { TrendingUp, TrendingDown, Minus, Activity } from 'lucide-react';
+import { useVitalTrends, useVitalRawWindow, useVitalInsights } from '@/hooks/use-vitals';
+import { insightSeverityToTone, TONE_LINE_COLOR, TONE_LINE_COLOR_LIGHT } from '@/lib/vitals';
+import { CHART_VITALS, TREND_RANGE_OPTIONS, type ChartVital, type TrendRange } from '@/lib/constants';
 import { cn, formatDate, formatTime } from '@/lib/utils';
 import { EmptyState } from '@/components/shared/EmptyState';
-import type { Vital } from '@/types';
+import type { InsightDirection, Vital } from '@/types';
 
 interface SeriesPoint {
   x: string;
@@ -59,6 +59,12 @@ function ChartTooltip({
   );
 }
 
+function DirectionIcon({ direction }: { direction: InsightDirection }) {
+  if (direction === 'up') return <TrendingUp className="mt-0.5 h-4 w-4 shrink-0" />;
+  if (direction === 'down') return <TrendingDown className="mt-0.5 h-4 w-4 shrink-0" />;
+  return <Minus className="mt-0.5 h-4 w-4 shrink-0" />;
+}
+
 export function VitalTrendChart() {
   const [selectedVital, setSelectedVital] = useState<ChartVital>('blood_pressure');
   const [range, setRange] = useState<TrendRange>(7);
@@ -67,7 +73,6 @@ export function VitalTrendChart() {
   const isBp = selectedVital === 'blood_pressure';
   const is24h = range === '24h';
   const numericDays = typeof range === 'number' ? range : 7;
-  const color = CHART_VITAL_COLOR[selectedVital];
 
   // Day-aggregated trends (7/30/90) — disabled entirely in 24H mode.
   const primaryTrend = useVitalTrends(meta.parameter, numericDays, !is24h);
@@ -77,10 +82,17 @@ export function VitalTrendChart() {
     !is24h && isBp,
   );
   // Raw individual readings — only fetched in 24H mode. Reuses the existing
-  // GET /vitals endpoint (no backend change needed): day-aggregated trends
-  // would otherwise collapse a whole day of readings into one average point,
-  // defeating the point of a same-day view.
+  // GET /vitals endpoint (confirmed by the backend to return full rows even
+  // when filtered by parameter, so systolic + diastolic come off one row).
   const rawWindow = useVitalRawWindow(meta.parameter, 24, is24h);
+
+  // Same real insights query used by the dashboard's observation/alerts
+  // cards — react-query dedupes this to one shared network call.
+  const { data: insightsData } = useVitalInsights();
+  const paramInsight = insightsData?.insights.find((i) => i.parameter === meta.parameter);
+  const tone = paramInsight ? insightSeverityToTone(paramInsight.severity) : 'neutral';
+  const color = TONE_LINE_COLOR[tone];
+  const lightColor = TONE_LINE_COLOR_LIGHT[tone];
 
   const isLoading = is24h
     ? rawWindow.isLoading
@@ -111,13 +123,11 @@ export function VitalTrendChart() {
 
   const hasData = series.some((p) => p.primary != null);
 
-  // Trend callout: only meaningful for multi-day windows, and only for
-  // vitals where a rise has an established general direction of concern.
-  // Weight has no such direction without a personal goal, so it's excluded.
-  const insight =
-    !is24h && selectedVital !== 'weight' && primaryTrend.data
-      ? computeTrendInsight(primaryTrend.data.points, meta.label, meta.unit, meta.decimals, true)
-      : null;
+  // The insights endpoint always describes the last 7 days, regardless of
+  // which range is selected here — only show its callout when that window
+  // actually matches what's on screen, to avoid a "7 days ago" message next
+  // to a 90-day chart.
+  const showInsightCallout = !is24h && numericDays === 7 && !!paramInsight;
 
   return (
     <div className="rounded-xl border border-zinc-200 bg-white p-6">
@@ -139,19 +149,18 @@ export function VitalTrendChart() {
         </div>
       </div>
 
-      {/* Vital selector */}
-      <div className="mt-3 flex flex-wrap gap-1.5">
+      {/* Vital selector — neutral selected-state; color is reserved for
+          conveying live health status on the chart itself, not for telling
+          tabs apart. */}
+      <div className="mt-3 flex items-center gap-1 rounded-lg bg-zinc-100 p-0.5">
         {CHART_VITALS.map((v) => (
           <button
             key={v.key}
             onClick={() => setSelectedVital(v.key)}
             className={cn(
-              'rounded-full border px-3 py-1 text-xs font-medium transition-colors',
-              selectedVital === v.key
-                ? 'border-transparent text-white'
-                : 'border-zinc-200 text-zinc-600 hover:bg-zinc-50',
+              'flex-1 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors',
+              selectedVital === v.key ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500 hover:text-zinc-800',
             )}
-            style={selectedVital === v.key ? { backgroundColor: CHART_VITAL_COLOR[v.key] } : undefined}
           >
             {v.shortLabel}
           </button>
@@ -216,9 +225,9 @@ export function VitalTrendChart() {
                     type="monotone"
                     dataKey="secondary"
                     name="Diastolic"
-                    stroke="#5EEAD4"
+                    stroke={lightColor}
                     strokeWidth={2.5}
-                    dot={{ r: 3, fill: '#5EEAD4' }}
+                    dot={{ r: 3, fill: lightColor }}
                     connectNulls
                     isAnimationActive={false}
                   />
@@ -232,34 +241,29 @@ export function VitalTrendChart() {
       {hasData && isBp && (
         <div className="mt-4 flex items-center gap-4 text-xs text-zinc-600">
           <span className="flex items-center gap-1.5">
-            <span className="h-0.5 w-3 rounded bg-teal-600" />
+            <span className="h-0.5 w-3 rounded" style={{ backgroundColor: color }} />
             Systolic
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="h-0.5 w-3 rounded bg-teal-300" />
+            <span className="h-0.5 w-3 rounded" style={{ backgroundColor: lightColor }} />
             Diastolic
           </span>
         </div>
       )}
 
-      {insight && insight.direction !== 'flat' && (
+      {showInsightCallout && (
         <div
           className={cn(
             'mt-4 flex items-start gap-2.5 rounded-lg border p-3',
-            insight.tone === 'watch'
-              ? 'border-amber-200 bg-amber-50 text-amber-900'
-              : 'border-emerald-200 bg-emerald-50 text-emerald-900',
+            tone === 'alert'
+              ? 'border-red-200 bg-red-50 text-red-900'
+              : tone === 'watch'
+                ? 'border-amber-200 bg-amber-50 text-amber-900'
+                : 'border-emerald-200 bg-emerald-50 text-emerald-900',
           )}
         >
-          {insight.direction === 'up' ? (
-            <TrendingUp className="mt-0.5 h-4 w-4 shrink-0" />
-          ) : (
-            <TrendingDown className="mt-0.5 h-4 w-4 shrink-0" />
-          )}
-          <p className="text-sm">
-            {meta.shortLabel} trending {insight.direction} <span className="font-semibold">{insight.deltaLabel}</span> over
-            this period.{insight.tone === 'watch' && ' Consider a consultation.'}
-          </p>
+          <DirectionIcon direction={paramInsight!.direction} />
+          <p className="text-sm">{paramInsight!.message}</p>
         </div>
       )}
     </div>

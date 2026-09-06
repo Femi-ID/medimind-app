@@ -1,10 +1,11 @@
 'use client';
 
-import { useMutation, useQuery } from '@tanstack/react-query';
-import { usersApi, vitalsApi } from '@/lib/api';
+import { useMutation } from '@tanstack/react-query';
+import { usersApi } from '@/lib/api';
 import type { UpdateProfilePayload } from '@/lib/api/users';
 import { useAuthStore } from '@/lib/auth/store';
 import { useSessions } from '@/hooks/use-consultation';
+import { useVitalCount } from '@/hooks/use-vitals';
 
 /** Any successful profile write updates the shared auth-store user directly —
  *  every page reading `user` (sidebar, header, guards) stays in sync. */
@@ -29,28 +30,15 @@ export function useDeleteAccount() {
   });
 }
 
-/**
- * Real counts only — no invented "days active" or "reminders" (no backend
- * basis for either). Vitals count is a best-effort read (capped fetch, so an
- * account with more than the cap shows "200+" rather than a wrong number);
- * consultation count is exact (the sessions endpoint returns a real `total`).
- */
-const VITALS_COUNT_CAP = 200;
-
+/** Both counts are now exact — /vitals/count replaced the old capped-fetch
+ *  workaround, and /consultations/sessions already returned a real total. */
 export function useProfileStats() {
-  const vitals = useQuery({
-    queryKey: ['vitals', 'list', VITALS_COUNT_CAP],
-    queryFn: () => vitalsApi.listVitals({ limit: VITALS_COUNT_CAP }),
-    staleTime: 60_000,
-  });
+  const vitals = useVitalCount();
   const sessions = useSessions();
-
-  const vitalsCount = vitals.data?.length ?? null;
-  const isVitalsCapped = vitalsCount != null && vitalsCount >= VITALS_COUNT_CAP;
 
   return {
     isLoading: vitals.isLoading || sessions.isLoading,
-    vitalsLabel: vitalsCount == null ? '—' : isVitalsCapped ? `${VITALS_COUNT_CAP}+` : String(vitalsCount),
+    vitalsLabel: vitals.data ? String(vitals.data.count) : '—',
     consultationsLabel: sessions.data ? String(sessions.data.total) : '—',
   };
 }
@@ -58,5 +46,17 @@ export function useProfileStats() {
 export function useExportData() {
   return useMutation({
     mutationFn: () => usersApi.exportData(),
+  });
+}
+
+export function useExportPdf() {
+  return useMutation({
+    mutationFn: () => usersApi.exportPdf(),
+  });
+}
+
+export function useExportCsv() {
+  return useMutation({
+    mutationFn: () => usersApi.exportCsv(),
   });
 }

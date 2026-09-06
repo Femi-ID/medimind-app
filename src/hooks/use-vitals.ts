@@ -60,6 +60,29 @@ export function useRecentVitals(limit = 5) {
   });
 }
 
+/** Exact total reading count — replaces the old "fetch 200 rows and count" workaround. */
+export function useVitalCount() {
+  return useQuery({
+    queryKey: ['vitals', 'count'],
+    queryFn: vitalsApi.getCount,
+    staleTime: 60_000,
+  });
+}
+
+/**
+ * Real, LLM-backed analysis (with a same-shape rule-based fallback server-side).
+ * Shared by ObservationBanner, AlertsInsights, and the trend chart's callout —
+ * react-query dedupes this to ONE network call across all three consumers.
+ * staleTime matches the backend's own guidance (each call hits the LLM).
+ */
+export function useVitalInsights() {
+  return useQuery({
+    queryKey: ['vitals', 'insights'],
+    queryFn: vitalsApi.getInsights,
+    staleTime: 5 * 60_000,
+  });
+}
+
 export function useCreateVital() {
   const queryClient = useQueryClient();
   return useMutation({

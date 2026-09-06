@@ -72,6 +72,24 @@ export interface VitalTrends {
   points: VitalTrendPoint[];
 }
 
+/** GET /vitals/insights — AI-generated (LLM, with a rule-based fallback of
+ *  the same shape) analysis of the last 7 days. One entry per parameter that
+ *  has data; parameters with no readings are simply omitted. */
+export type InsightSeverity = 'normal' | 'watch' | 'alert';
+export type InsightDirection = 'up' | 'down' | 'flat' | 'mixed';
+
+export interface VitalInsight {
+  parameter: VitalParameter;
+  severity: InsightSeverity;
+  direction: InsightDirection;
+  message: string;
+}
+
+export interface VitalInsightsResponse {
+  insights: VitalInsight[];
+  summary: string;
+}
+
 /* ---------------------------------------------------------- Consultations */
 export type Severity = 'LOW' | 'MODERATE' | 'HIGH';
 export type Triage = 'EMERGENCY' | 'URGENT' | 'MODERATE' | 'SELF_CARE';

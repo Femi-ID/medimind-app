@@ -1,4 +1,4 @@
-import type { VitalParameter, VitalTrendPoint } from '@/types';
+import type { VitalParameter } from '@/types';
 import { VITAL_BY_PARAM } from '@/lib/constants';
 
 export type VitalTone = 'good' | 'watch' | 'alert' | 'neutral';
@@ -29,6 +29,29 @@ export function toneDotClass(tone: VitalTone) {
 }
 
 /**
+ * Raw hex equivalents of the tone system, for contexts that can't use
+ * Tailwind classes (Recharts `stroke`/`fill` props take literal colors).
+ * Single source of truth shared by VitalCard's sparkline and the dashboard's
+ * trend chart, so a vital's line color always matches its badge/sparkline —
+ * both driven by the same live status, not a fixed per-vital hue.
+ */
+export const TONE_LINE_COLOR: Record<VitalTone, string> = {
+  good: '#10B981', // emerald-500
+  watch: '#F59E0B', // amber-500
+  alert: '#DC2626', // red-600
+  neutral: '#71717A', // zinc-500
+};
+
+/** A lighter tint of the same tone, for a secondary series (e.g. diastolic)
+ *  that should read as "related to" the primary line, not a rival color. */
+export const TONE_LINE_COLOR_LIGHT: Record<VitalTone, string> = {
+  good: '#6EE7B7', // emerald-300
+  watch: '#FCD34D', // amber-300
+  alert: '#FCA5A5', // red-300
+  neutral: '#D4D4D8', // zinc-300
+};
+
+/**
  * Informational-only classification against commonly cited public-health
  * reference ranges — never a diagnosis. Used purely to color a badge and
  * decide whether to surface an insight card.
@@ -50,57 +73,9 @@ export function classifyVital(parameter: VitalParameter, value: number): VitalSt
   return { label: 'Normal', tone: 'good' };
 }
 
-/* ------------------------------------------------------------- Insights */
-
-export interface TrendInsight {
-  direction: 'up' | 'down' | 'flat';
-  deltaLabel: string; // e.g. "+12 mmHg"
-  message: string;
-  tone: VitalTone;
-}
-
-/**
- * Compares the earliest vs latest point in a trend window. Returns null when
- * there isn't enough data to say anything meaningful (avoids inventing a
- * "trend" out of one or two noisy readings).
- */
-export function computeTrendInsight(
-  points: VitalTrendPoint[],
-  label: string,
-  unit: string,
-  decimals: number,
-  riseIsConcerning = true,
-): TrendInsight | null {
-  const withData = points.filter((p) => p.count > 0);
-  if (withData.length < 3) return null;
-
-  const first = withData[0].avg;
-  const last = withData[withData.length - 1].avg;
-  const delta = last - first;
-  const round = (n: number) => Number(n.toFixed(decimals));
-  const absDelta = round(Math.abs(delta));
-
-  // Not a meaningful move — under ~4% of the first value (with a small floor).
-  const threshold = Math.max(Math.abs(first) * 0.04, decimals > 0 ? 0.3 : 2);
-  if (absDelta < threshold) {
-    return {
-      direction: 'flat',
-      deltaLabel: `Steady`,
-      message: `Your ${label.toLowerCase()} has stayed steady over this period.`,
-      tone: 'good',
-    };
-  }
-
-  const direction = delta > 0 ? 'up' : 'down';
-  const sign = delta > 0 ? '+' : '−';
-  const concerning = riseIsConcerning ? direction === 'up' : direction === 'down';
-
-  return {
-    direction,
-    deltaLabel: `${sign}${absDelta} ${unit}`,
-    message: `Your ${label.toLowerCase()} has trended ${direction === 'up' ? 'upward' : 'downward'} by ${absDelta} ${unit} over this period. Today's average is ${round(last)} ${unit}.`,
-    tone: concerning ? 'watch' : 'good',
-  };
+/** Maps the backend's insight severity vocabulary onto our own tone system. */
+export function insightSeverityToTone(severity: 'normal' | 'watch' | 'alert'): VitalTone {
+  return severity === 'normal' ? 'good' : severity;
 }
 
 export function formatVitalValue(value: number, decimals: number): string {

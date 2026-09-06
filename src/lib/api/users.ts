@@ -53,3 +53,15 @@ export async function exportData(): Promise<unknown> {
   const res = await api.get('/users/me/export');
   return res.data;
 }
+
+/** GET /users/me/export/pdf → PDF health report with embedded vitals charts. */
+export async function exportPdf(): Promise<Blob> {
+  const res = await api.get('/users/me/export/pdf', { responseType: 'blob' });
+  return res.data;
+}
+
+/** GET /users/me/export/csv → vitals readings as CSV. */
+export async function exportCsv(): Promise<Blob> {
+  const res = await api.get('/users/me/export/csv', { responseType: 'blob' });
+  return res.data;
+}

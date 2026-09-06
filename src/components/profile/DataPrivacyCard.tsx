@@ -2,7 +2,7 @@
 
 import { toast } from 'sonner';
 import { Download, KeyRound, Shield, Trash2 } from 'lucide-react';
-import { useExportData } from '@/hooks/use-profile';
+import { useExportData, useExportPdf, useExportCsv } from '@/hooks/use-profile';
 import { getErrorMessage } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
@@ -11,24 +11,54 @@ interface DataPrivacyCardProps {
   onDelete: () => void;
 }
 
-export function DataPrivacyCard({ onChangePassword, onDelete }: DataPrivacyCardProps) {
-  const exportData = useExportData();
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
 
-  async function handleExport() {
+const today = () => new Date().toISOString().slice(0, 10);
+
+export function DataPrivacyCard({ onChangePassword, onDelete }: DataPrivacyCardProps) {
+  const exportJson = useExportData();
+  const exportPdf = useExportPdf();
+  const exportCsv = useExportCsv();
+
+  async function handleExportJson() {
     try {
-      const data = await exportData.mutateAsync();
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `medimind-export-${new Date().toISOString().slice(0, 10)}.json`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-      toast.success('Export downloaded');
+      const data = await exportJson.mutateAsync();
+      downloadBlob(
+        new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }),
+        `medimind-export-${today()}.json`,
+      );
+      toast.success('JSON export downloaded');
     } catch (err) {
       toast.error(getErrorMessage(err, 'Could not export your data.'));
+    }
+  }
+
+  async function handleExportPdf() {
+    try {
+      const blob = await exportPdf.mutateAsync();
+      downloadBlob(blob, `medimind-report-${today()}.pdf`);
+      toast.success('PDF report downloaded');
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Could not generate your PDF report.'));
+    }
+  }
+
+  async function handleExportCsv() {
+    try {
+      const blob = await exportCsv.mutateAsync();
+      downloadBlob(blob, `medimind-vitals-${today()}.csv`);
+      toast.success('CSV downloaded');
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Could not export your vitals as CSV.'));
     }
   }
 
@@ -36,19 +66,29 @@ export function DataPrivacyCard({ onChangePassword, onDelete }: DataPrivacyCardP
     <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm sm:p-6">
       <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-zinc-500">Data &amp; Privacy</p>
       <div className="divide-y divide-zinc-100">
-        <div className="flex min-h-[56px] items-center justify-between gap-3 py-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 py-4">
           <div className="flex min-w-0 items-start gap-3">
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-zinc-100">
               <Download className="h-[18px] w-[18px] text-zinc-600" />
             </span>
             <div className="min-w-0">
               <p className="text-sm font-medium text-zinc-900">Export my health data</p>
-              <p className="mt-0.5 text-xs leading-relaxed text-zinc-500">Download everything as JSON</p>
+              <p className="mt-0.5 text-xs leading-relaxed text-zinc-500">
+                PDF includes a vitals chart · CSV is readings only
+              </p>
             </div>
           </div>
-          <Button size="sm" onClick={handleExport} loading={exportData.isPending} className="shrink-0">
-            Export
-          </Button>
+          <div className="flex shrink-0 gap-1.5">
+            <Button variant="secondary" size="sm" onClick={handleExportPdf} loading={exportPdf.isPending}>
+              PDF
+            </Button>
+            <Button variant="secondary" size="sm" onClick={handleExportCsv} loading={exportCsv.isPending}>
+              CSV
+            </Button>
+            <Button variant="secondary" size="sm" onClick={handleExportJson} loading={exportJson.isPending}>
+              JSON
+            </Button>
+          </div>
         </div>
 
         <div className="flex min-h-[56px] items-center justify-between gap-3 py-4">

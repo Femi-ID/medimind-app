@@ -188,15 +188,6 @@ export const CHART_VITALS: ChartVitalMeta[] = [
   },
 ];
 
-/** Fixed line colors per chart vital — deliberately NOT tone/status-based
- *  (unlike sparklines), so the same vital always reads as the same color. */
-export const CHART_VITAL_COLOR: Record<ChartVital, string> = {
-  blood_pressure: '#0D9488', // teal-600 — also used for the BP VitalCard sparkline, so both agree
-  heart_rate: '#059669', // emerald-600
-  blood_glucose: '#7C3AED', // violet-600
-  weight: '#0EA5E9', // sky-600
-};
-
 /* ------------------------------------------------------- Triage / severity */
 /** Drives the consultation UI. Tailwind class fragments kept literal so the
  *  JIT compiler can see them. */

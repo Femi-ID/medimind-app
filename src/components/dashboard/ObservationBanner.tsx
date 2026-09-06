@@ -2,29 +2,42 @@
 
 import Link from 'next/link';
 import { AlertTriangle, MessageCircle, MapPin, Sparkles } from 'lucide-react';
-import { useLatestVitals, useVitalTrends } from '@/hooks/use-vitals';
-import { computeTrendInsight } from '@/lib/vitals';
+import { useLatestVitals, useVitalInsights } from '@/hooks/use-vitals';
 import { formatRelative } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 
 /**
- * Real, computed insight — not scripted copy. Built from the last 7 days of
- * systolic BP trend data; only renders a "worth attention" framing when the
- * numbers actually show a meaningful rise. No AI call involved (yet) — this
- * is a transparent, rule-based read of your own trend data.
+ * Real, LLM-generated observation (GET /vitals/insights) — no longer a
+ * client-side heuristic. The endpoint's `summary` is a one-sentence synthesis
+ * across all logged vitals; falls back gracefully server-side if the LLM is
+ * unavailable, so this never breaks even under that failure mode.
  */
 export function ObservationBanner() {
   const { data: latest } = useLatestVitals();
-  const { data: trend } = useVitalTrends('systolic_bp', 7);
+  const { data: insights, isLoading, isError } = useVitalInsights();
 
   const systolic = latest?.find((v) => v.parameter === 'systolic_bp');
   const diastolic = latest?.find((v) => v.parameter === 'diastolic_bp');
   const heartRate = latest?.find((v) => v.parameter === 'heart_rate');
 
-  const insight = trend ? computeTrendInsight(trend.points, 'systolic blood pressure', 'mmHg', 0, true) : null;
+  const hasAnyInsight = (insights?.insights.length ?? 0) > 0;
+  const isConcerning = insights?.insights.some((i) => i.severity === 'alert') ?? false;
 
-  // Not enough data yet — nudge toward the first log instead of a blank gap.
-  if (!insight || (systolic?.value == null)) {
+  if (isLoading) {
+    return (
+      <div className="rounded-xl border border-zinc-200 bg-white p-6 lg:col-span-2">
+        <Skeleton className="h-4 w-40" />
+        <Skeleton className="mt-4 h-5 w-full max-w-lg" />
+        <Skeleton className="mt-2 h-5 w-2/3 max-w-md" />
+      </div>
+    );
+  }
+
+  // Not enough data yet, or the endpoint had nothing to say — nudge toward
+  // the first log instead of a blank gap. Also the fallback for a total
+  // request failure (isError), rather than showing a broken/empty card.
+  if (isError || !hasAnyInsight) {
     return (
       <div className="rounded-xl border border-zinc-200 bg-white p-6 lg:col-span-2">
         <div className="flex items-center gap-2">
@@ -36,15 +49,13 @@ export function ObservationBanner() {
           </p>
         </div>
         <p className="mt-4 text-base text-zinc-700">
-          Log a few blood pressure readings over the next week and MediMind will start surfacing
-          trends here — like whether your numbers are drifting up or holding steady.
+          Log a few readings over the next week and MediMind will start surfacing trends here —
+          like whether your numbers are drifting up or holding steady.
         </p>
         <p className="mt-4 text-xs text-zinc-500">Preliminary observation, not a diagnosis. Consult a qualified professional.</p>
       </div>
     );
   }
-
-  const isConcerning = insight.tone === 'watch';
 
   return (
     <div className="rounded-xl border border-zinc-200 bg-white p-6 lg:col-span-2">
@@ -65,7 +76,7 @@ export function ObservationBanner() {
         )}
       </div>
       <p className="mt-1.5 text-xs text-zinc-400">Based on your last 7 days</p>
-      <p className="mt-4 max-w-2xl text-pretty text-lg leading-relaxed text-zinc-800">{insight.message}</p>
+      <p className="mt-4 max-w-2xl text-pretty text-lg leading-relaxed text-zinc-800">{insights!.summary}</p>
 
       <div className="mt-5 flex flex-wrap gap-2">
         {systolic?.value != null && diastolic?.value != null && (

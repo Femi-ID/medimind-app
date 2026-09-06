@@ -1,5 +1,5 @@
 import { api } from './client';
-import type { Vital, VitalLatestEntry, VitalParameter, VitalTrends } from '@/types';
+import type { Vital, VitalInsightsResponse, VitalLatestEntry, VitalParameter, VitalTrends } from '@/types';
 
 export interface CreateVitalPayload {
   systolicBp?: number;
@@ -37,6 +37,19 @@ export async function getLatest(): Promise<VitalLatestEntry[]> {
 /** GET /vitals/trends?parameter=<snake_case>&days=. */
 export async function getTrends(parameter: VitalParameter, days = 7): Promise<VitalTrends> {
   const res = await api.get<VitalTrends>('/vitals/trends', { params: { parameter, days } });
+  return res.data;
+}
+
+/** GET /vitals/count → exact total, replacing the old "fetch N rows and count" workaround. */
+export async function getCount(): Promise<{ count: number }> {
+  const res = await api.get<{ count: number }>('/vitals/count');
+  return res.data;
+}
+
+/** GET /vitals/insights → AI-generated (LLM, gracefully falls back to a
+ *  rule-based heuristic of the same shape) analysis of the last 7 days. */
+export async function getInsights(): Promise<VitalInsightsResponse> {
+  const res = await api.get<VitalInsightsResponse>('/vitals/insights');
   return res.data;
 }
 

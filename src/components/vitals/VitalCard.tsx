@@ -4,11 +4,17 @@ import Link from 'next/link';
 import { AreaChart, Area, ResponsiveContainer } from 'recharts';
 import { PlusCircle } from 'lucide-react';
 import { cn, formatRelative } from '@/lib/utils';
-import { classifyBloodPressure, classifyVital, formatVitalValue, toneBadgeClass, toneDotClass } from '@/lib/vitals';
+import {
+  classifyBloodPressure,
+  classifyVital,
+  formatVitalValue,
+  toneBadgeClass,
+  toneDotClass,
+  TONE_LINE_COLOR,
+} from '@/lib/vitals';
 import { useVitalTrends } from '@/hooks/use-vitals';
 import type { VitalLatestEntry, VitalParameter } from '@/types';
 import type { VitalMeta } from '@/lib/constants';
-import { CHART_VITAL_COLOR } from '@/lib/constants';
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface VitalCardProps {
@@ -18,13 +24,6 @@ interface VitalCardProps {
   pairLatest?: VitalLatestEntry;
   onLog: () => void;
 }
-
-const SPARKLINE_PARAM_COLOR: Record<string, string> = {
-  good: '#10B981',
-  watch: '#F59E0B',
-  alert: '#DC2626',
-  neutral: '#71717A',
-};
 
 function Sparkline({ parameter, color }: { parameter: VitalParameter; color: string }) {
   const { data } = useVitalTrends(parameter, 7);
@@ -110,10 +109,7 @@ export function VitalCard({ meta, latest, pairLatest, onLog }: VitalCardProps) {
         <span className="num text-4xl font-semibold text-zinc-900">{displayValue}</span>
       </div>
       <span className="text-xs text-zinc-500">{meta.unit}</span>
-      <Sparkline
-        parameter={meta.param}
-        color={isBp ? CHART_VITAL_COLOR.blood_pressure : SPARKLINE_PARAM_COLOR[status.tone]}
-      />
+      <Sparkline parameter={meta.param} color={TONE_LINE_COLOR[status.tone]} />
       <p className="mt-2 text-xs text-zinc-500">Logged {formatRelative(latest!.recordedAt)}</p>
     </Link>
   );
