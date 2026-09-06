@@ -1,18 +1,26 @@
 import { z } from 'zod';
 import { VITALS } from '@/lib/constants';
 
-const bp = VITALS.reduce((acc, v) => ({ ...acc, [v.param]: v }), {} as Record<string, (typeof VITALS)[number]>);
+const META = VITALS.reduce((acc, v) => ({ ...acc, [v.param]: v }), {} as Record<string, (typeof VITALS)[number]>);
 
+/**
+ * Kept as plain optional strings — matching exactly what <input type="number">
+ * actually produces — rather than z.preprocess()'d into numbers. preprocess()
+ * makes Zod's *input* type `unknown` while the *output* type is `number`;
+ * zodResolver can't reconcile that split against an explicit useForm<T>()
+ * generic (a well-known react-hook-form + Zod incompatibility, not a bug in
+ * either library individually). Converting string -> number happens once, at
+ * the API-call boundary in the component, not inside the schema.
+ */
 const numField = (param: string) => {
-  const meta = bp[param];
-  return z.preprocess(
-    (v) => (v === '' || v == null ? undefined : Number(v)),
-    z
-      .number()
-      .min(meta.min, `Must be at least ${meta.min}`)
-      .max(meta.max, `Must be at most ${meta.max}`)
-      .optional(),
-  );
+  const meta = META[param];
+  return z
+    .string()
+    .optional()
+    .refine(
+      (v) => !v || (!Number.isNaN(Number(v)) && Number(v) >= meta.min && Number(v) <= meta.max),
+      `Must be between ${meta.min} and ${meta.max}`,
+    );
 };
 
 export const logVitalSchema = z
@@ -23,16 +31,11 @@ export const logVitalSchema = z
     bloodGlucose: numField('blood_glucose'),
     weight: numField('weight'),
   })
-  .refine(
-    (v) =>
-      v.systolicBp != null ||
-      v.diastolicBp != null ||
-      v.heartRate != null ||
-      v.bloodGlucose != null ||
-      v.weight != null,
-    { message: 'Enter at least one reading.', path: ['systolicBp'] },
-  )
-  .refine((v) => (v.systolicBp != null) === (v.diastolicBp != null), {
+  .refine((v) => !!(v.systolicBp || v.diastolicBp || v.heartRate || v.bloodGlucose || v.weight), {
+    message: 'Enter at least one reading.',
+    path: ['systolicBp'],
+  })
+  .refine((v) => !!v.systolicBp === !!v.diastolicBp, {
     message: 'Enter both systolic and diastolic together.',
     path: ['diastolicBp'],
   });

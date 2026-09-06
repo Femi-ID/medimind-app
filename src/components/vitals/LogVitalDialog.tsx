@@ -36,7 +36,13 @@ export function LogVitalDialog({ open, onClose }: LogVitalDialogProps) {
 
   async function onSubmit(values: LogVitalValues) {
     try {
-      await createVital.mutateAsync(values);
+      await createVital.mutateAsync({
+        systolicBp: values.systolicBp ? Number(values.systolicBp) : undefined,
+        diastolicBp: values.diastolicBp ? Number(values.diastolicBp) : undefined,
+        heartRate: values.heartRate ? Number(values.heartRate) : undefined,
+        bloodGlucose: values.bloodGlucose ? Number(values.bloodGlucose) : undefined,
+        weight: values.weight ? Number(values.weight) : undefined,
+      });
       toast.success('Reading logged');
       handleClose();
     } catch (err) {

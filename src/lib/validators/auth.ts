@@ -23,16 +23,19 @@ export const registerSchema = z.object({
   password: z
     .string()
     .min(PASSWORD_MIN_LENGTH, `Password must be at least ${PASSWORD_MIN_LENGTH} characters`),
-  gender: z.preprocess(
-    (v) => (v === '' || v == null ? undefined : v),
-    z.enum(['MALE', 'FEMALE', 'OTHER']).optional(),
-  ),
-  age: z.preprocess(
-    (v) => (v === '' || v == null ? undefined : Number(v)),
-    z.number().int('Enter a whole number').min(1, 'Enter a valid age').max(120, 'Enter a valid age').optional(),
-  ),
-  agreeToTerms: z
-    .boolean()
-    .refine((v) => v === true, { message: 'Please accept the terms to continue.' }),
+  // Plain string union (native <select> always yields a string, '' meaning
+  // "not selected") instead of z.preprocess() — see LogVitalDialog's
+  // validator for why preprocess is avoided throughout this app now.
+  gender: z.enum(['', 'MALE', 'FEMALE', 'OTHER']),
+  age: z
+    .string()
+    .refine((v) => !v || (/^\d+$/.test(v) && Number(v) >= 1 && Number(v) <= 120), 'Enter a valid age'),
+  // `.trim()` here is deliberate, not cosmetic: a bare `(v) => v === true`
+  // predicate gets auto-narrowed by TypeScript to the literal type `true`,
+  // which then can't be satisfied by a `boolean` default value of `false` —
+  // this exact pattern broke the Vercel build. Boolean(v) sidesteps it.
+  agreeToTerms: z.boolean().refine((v) => Boolean(v), {
+    message: 'Please accept the terms to continue.',
+  }),
 });
 export type RegisterValues = z.infer<typeof registerSchema>;

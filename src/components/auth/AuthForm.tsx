@@ -234,16 +234,6 @@ export function LoginForm() {
 
 /* -------------------------------------------------------------- Register */
 
-type RegisterFormValues = {
-  firstName: string;
-  lastName: string;
-  email: string;
-  password: string;
-  gender: '' | 'MALE' | 'FEMALE' | 'OTHER';
-  age: string;
-  agreeToTerms: boolean;
-};
-
 function PasswordStrength({ value }: { value: string }) {
   let score = 0;
   if (value.length >= 8) score++;
@@ -292,7 +282,7 @@ export function RegisterForm() {
     handleSubmit,
     watch,
     formState: { errors, isSubmitting },
-  } = useForm<RegisterFormValues, unknown, RegisterValues>({
+  } = useForm<RegisterValues>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
       firstName: '',
@@ -315,16 +305,16 @@ export function RegisterForm() {
         firstName: values.firstName,
         lastName: values.lastName,
         password: values.password,
-        gender: values.gender,
+        gender: values.gender === '' ? undefined : values.gender,
       });
 
       // Signup returns no tokens — log in with the same credentials.
       await signIn(values.email, values.password);
 
       // Age isn't accepted by /users/create; apply it now (best-effort).
-      if (values.age != null) {
+      if (values.age) {
         try {
-          const updated = await usersApi.updateProfile({ age: values.age });
+          const updated = await usersApi.updateProfile({ age: Number(values.age) });
           setUser(updated);
         } catch {
           /* non-fatal — user can set age on the profile page */

@@ -28,8 +28,8 @@ export function ProfileEditDialog({ open, onClose }: { open: boolean; onClose: (
     values: {
       firstName: user?.firstName ?? '',
       lastName: user?.lastName ?? '',
-      age: user?.age ?? undefined,
-      gender: user?.gender ?? undefined,
+      age: user?.age != null ? String(user.age) : '',
+      gender: user?.gender ?? '',
     },
   });
 
@@ -40,7 +40,12 @@ export function ProfileEditDialog({ open, onClose }: { open: boolean; onClose: (
 
   async function onSubmit(values: ProfileEditValues) {
     try {
-      await updateProfile.mutateAsync(values);
+      await updateProfile.mutateAsync({
+        firstName: values.firstName,
+        lastName: values.lastName,
+        age: values.age ? Number(values.age) : undefined,
+        gender: values.gender === '' ? undefined : values.gender,
+      });
       toast.success('Profile updated');
       handleClose();
     } catch (err) {
