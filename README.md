@@ -14,21 +14,31 @@
 
 ## Table of Contents
 
-1. [Overview](#1-overview)
-2. [Key Features](#2-key-features)
-3. [Tech Stack](#3-tech-stack)
-4. [Application Architecture](#4-application-architecture)
-5. [Authentication Model](#5-authentication-model)
-6. [Project Structure](#6-project-structure)
-7. [Getting Started](#7-getting-started)
-8. [Environment Variables](#8-environment-variables)
-9. [Running the Project](#9-running-the-project)
-10. [Pages & Routes](#10-pages--routes)
-11. [Backend Contract](#11-backend-contract)
-12. [Testing](#12-testing)
-13. [Deployment](#13-deployment)
-14. [Related Repository](#14-related-repository)
-15. [License](#15-license)
+- [Table of Contents](#table-of-contents)
+- [1. Overview](#1-overview)
+- [2. Key Features](#2-key-features)
+  - [Landing \& Auth](#landing--auth)
+  - [Dashboard](#dashboard)
+  - [AI Consultation](#ai-consultation)
+  - [Hospitals](#hospitals)
+  - [Profile](#profile)
+  - [Platform / Engineering](#platform--engineering)
+- [3. Tech Stack](#3-tech-stack)
+- [4. Application Architecture](#4-application-architecture)
+  - [Rendering model](#rendering-model)
+- [5. Authentication Model](#5-authentication-model)
+- [6. Project Structure](#6-project-structure)
+- [7. Getting Started](#7-getting-started)
+  - [Prerequisites](#prerequisites)
+  - [Installation](#installation)
+- [8. Environment Variables](#8-environment-variables)
+- [9. Running the Project](#9-running-the-project)
+- [10. Pages \& Routes](#10-pages--routes)
+- [11. Backend Contract](#11-backend-contract)
+- [12. Testing](#12-testing)
+- [13. Deployment](#13-deployment)
+- [14. Related Repository](#14-related-repository)
+- [15. License](#15-license)
 
 ---
 
@@ -38,12 +48,12 @@ This is the **web client** for **MediMind** — a context-aware healthcare perso
 
 The frontend is **not** where any clinical logic lives — emergency detection, severity assessment, and output safety-checking all happen backend-side. This app's job is to present that safely, quickly, and legibly: render the right UI state off a single `triage` field, never let an emergency banner get missed, and keep the experience calm under a slow or cold-started backend.
 
-| | |
+<!-- | | |
 |---|---|
 | **Author** | Idowu Oluwafemi Paul (160408034) |
 | **Supervisor** | Dr. K. A. Abdulsalam |
 | **Department** | Electrical and Electronics Engineering, University of Lagos |
-| **Backend** | [`github.com/Femi-ID/medimind-API`](https://github.com/Femi-ID/medimind-API) |
+| **Backend** | [`github.com/Femi-ID/medimind-API`](https://github.com/Femi-ID/medimind-API) | -->
 
 ---
 
@@ -290,7 +300,7 @@ Intended to be deployed to **Vercel**, pointed at the deployed backend:
 ```mermaid
 flowchart LR
     User(["User"]) --> Vercel["Frontend — Vercel<br/>Next.js"]
-    Vercel -->|HTTPS, withCredentials| Render["Backend — Render<br/>MediMind API"]
+    Vercel -->|HTTPS, withCredentials| Railway["Backend — Railway<br/>MediMind API"]
 ```
 
 1. Import the repository into Vercel.
